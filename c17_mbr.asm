@@ -8,13 +8,24 @@
 
 ;===============================================================================
 SECTION  mbr  vstart=0x00007c00         
+
+         ; --------------------------------------------------
+         ; BIOS to MBR interface
+         ; --------------------------------------------------
+         ; cs:ip = 0x0000:0x7c00
+         ; dl = boot drive unit
+         ;  (fixed disks / removable drives: 0x80=first, 0x81=second, ..., 0xfe;
+         ;  floppies / superfloppies: 0x00=first, 0x01=second, ..., 0x7e;
+         ;  0xff, 0x7f are reserved for ROM / remote drives and must not be used on disk)
+         ; dh bit 5 = 0
+
          ;设置堆栈段和栈指针 
-         ; cs = 0x0000
-         ; sp = 0x7c00
-         mov ax,cs      
-         mov ss,ax ; ss = 0x0000
-         mov sp,0x7c00 ; sp = 0x7c00
-      
+         mov ax, cs
+         mov ds, ax
+         mov es, ax
+         mov ss, ax
+         mov sp, 0x7c00 ; sp = 0x7c00
+
          ;计算GDT所在的逻辑段地址
          mov eax,[cs:pgdt+0x02]             ; 取到存在标号 pgdt 处的 GDT 32位线性地址
          xor edx,edx                        ; 清空edx
