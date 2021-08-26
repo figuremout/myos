@@ -1,54 +1,84 @@
-ASM			:= nasm
-ASMFLAGS	:= -I boot/include/		# must has the tail /
+# CONFIG
+KERNELENTRY		:= 0x30400
 
-DASM		:= ndisasm
-DASMFLAGS	:=
+# FLAG
+ASM				:= nasm
+ASMBOOTFLAGS	:= -I boot/include/ # must has the tail /
+ASMKERNELFLAGS	:= -I include/ -f elf  # must has the tail /
+#ASMDEPSFLAGS	:= -M
 
-CC 			:= gcc
-CFLAGS 		:=
+DASM			:= ndisasm
+DASMFLAGS		:=
 
-LS 			:= ld
-LDFLAGS 	:=
+CC 				:= gcc
+CFLAGS 			:= -I include/ -c -fno-builtin -m32
 
-IMAGE		:= floppy.img
-IMAGEDIR	:= floppy
+LD 				:= ld
+LDFLAGS 		:= -Ttext $(KERNELENTRY) -m elf_i386 -s
 
-all: prepare writeFloppy floppy/loader.bin
+BOOTDIR			:= boot
+KERNELDIR		:= kernel
+LIBDIR			:= lib
+
+# OUTPUT
+BOOT			:= $(BOOTDIR)/boot.bin
+LOADER			:= $(BOOTDIR)/loader.bin
+BOOTLOADER		:= $(BOOT) $(LOADER)
+
+KERNEL			:= $(KERNELDIR)/kernel.bin
+
+ASMOBJS			:= $(KERNELDIR)/kernel.o $(LIBDIR)/klib.o
+COBJS			:= $(KERNELDIR)/start.o 
+OBJS			:= $(ASMOBJS) $(COBJS)
+
+IMAGE			:= floppy.img
+MOUNTPOINT		:= floppy
+INSTALL			:= $(MOUNTPOINT)/loader.bin
+
+all: prepare $(INSTALL) umount
 
 prepare:
-	bash -c "if [[ ! -d ./bin ]]; then mkdir ./bin; fi"
 
-bin/boot.bin: boot/boot.asm boot/include/fat12.inc boot/include/load.inc
-	$(ASM) $(ASMFLAGS) -o $@ $<
+$(BOOTLOADER): %.bin: %.asm
+	$(ASM) $(ASMBOOTFLAGS) -o $@ $<
 
-bin/loader.bin: boot/loader.asm
-	$(ASM) $(ASMFLAGS) -o $@ $<
+$(ASMOBJS): %.o: %.asm
+	$(ASM) $(ASMKERNELFLAGS) -o $@ $<
 
-$(IMAGE):
+$(COBJS): %.o: %.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+$(KERNEL): $(OBJS)
+	$(LD) $(LDFLAGS) -o $(KERNEL) $(OBJS)
+
+$(IMAGE): $(BOOTLOADER) $(KERNEL)
 	# create raw img
 	dd if=/dev/zero of=$(IMAGE) bs=512 count=2880 # 1440 KB
 	# make fs
 	mkfs -t vfat -F 12 $(IMAGE)
+	# overwrite boot sector. Notice: Don't do this when mounted
+	dd if=$(BOOT) of=$(IMAGE) bs=512 count=1 conv=notrunc
 
-floppy/loader.bin: mountFloppy bin/loader.bin
-	cp bin/loader.bin ./floppy
+mount: $(IMAGE)
+	bash -c "if [[ ! -d $(MOUNTPOINT) ]]; then mkdir $(MOUNTPOINT); fi"
+	mount $(IMAGE) $(MOUNTPOINT) -o loop -t vfat
 
-writeFloppy: $(IMAGE) bin/boot.bin
-	dd if=bin/boot.bin of=$(IMAGE) bs=512 count=1 conv=notrunc
+$(INSTALL): mount
+	/bin/cp -f $(LOADER) $(MOUNTPOINT)
+	/bin/cp -f $(KERNEL) $(MOUNTPOINT)
 
-mountFloppy: $(IMAGE)
-	bash -c "if [[ ! -d ./floppy ]]; then mkdir ./floppy; fi"
-	mount $(IMAGE) $(IMAGEDIR) -o loop -t vfat
-
-umountFloppy: $(IMAGE)
+umount:
 	umount $(IMAGE)
-	rm -rf ./floppy
+	-rm -rf $(MOUNTPOINT)
 
 clean:
-	rm -rf ./bin
-	rm -f $(IMAGE)
+	-rm -rf $(BOOTLOADER)
+	-rm -rf $(KERNEL)
+	-rm -rf $(OBJS)
+
+disasm:
 
 tar:
 	tar -zcf myos.tar.gz ../../myos/
 
-.PHONY: clean writeFloppy mountFloppy
+.PHONY: prepare mount umount clean debug disasm

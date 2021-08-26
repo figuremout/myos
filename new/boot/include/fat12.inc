@@ -40,9 +40,14 @@ CountofClusters    equ DataSec / SecPerClus                                   ; 
                                                                               ; CountofCluster < 4085 means determine the type of this volume is FAT12
 MaxCluster         equ CountofClusters + 1                                    ; maximum valid cluster number = 2848
 
+; ============================================
+; Below functions are used in boot only, use stack to pass params and
+; ax to return value for code readability,
+; but follow callee clean-up convention (not cdecl) to save space
+; ============================================
 %macro FAT_UTILS 0
 ; --------------------------------------------
-; function: void readSector(uint16 sector, uint8 count, uint32 bufPtr);
+; function: void readSector(uint16 sector, uint16 count, uint32 bufPtr);
 ; param:
 ;       sector: start sector to read (LBA)
 ;       count = count of sectors to read
@@ -51,7 +56,7 @@ MaxCluster         equ CountofClusters + 1                                    ; 
 readSector:
     push bp
     mov bp, sp
-    sub sp, 0x40
+    sub sp, 0xf
 
     ; LBA2CHS procedure, not abstract to a function to save space
 .LBA2CHS:
@@ -69,15 +74,15 @@ readSector:
     mov [bp-6], ax                              ; local var C
 
     ; int 1302
-    mov ch, byte [bp-6]
-    mov cl, byte [bp-5]
+    mov cx, word [bp-6]
+    rol cx, 8
     ror cl, 2
-    and cl, byte [bp-2]
+    or cl, byte [bp-2]
     mov dh, byte [bp-4]
     mov dl, DrvNum
-    mov ax, word [bp+9]
+    mov ax, word [bp+10]
     mov es, ax
-    mov bx, word [bp+7]
+    mov bx, word [bp+8]
 .retry:
     mov ah, 2
     mov al, byte [bp+6]
@@ -86,7 +91,7 @@ readSector:
 
     mov sp, bp
     pop bp
-    ret
+    ret 8                                       ; follow callee clean-up convention to save space
 
 
 ; ------------------------------------------------
@@ -101,23 +106,22 @@ getFATByCluster:
     mov ax, word [bp+4]                         ; get param cluster
     mov bx, ax
     shr bx, 1
-    add ax, bx                                  ; FATOffset=cluster+(cluster/2)
+    add ax, bx                                  ; FATOffset=cluster+(cluster/2) 3
 
     xor dx, dx
     mov bx, BytsPerSec
     div bx                                      ; FATOffset/BPB_BytsPerSec
                                                 ; quotient=ax remainder=dx
-    add ax, RsvdSecCnt                          ; ax=ThisFATSecNum
+    add ax, RsvdSecCnt                          ; ax=ThisFATSecNum 1
                                                 ; dx=ThisFATEntOffset
-    mov [bp-2], dx                              ; local var ThisFATEntOffset
+    mov [bp-2], dx                              ; local var ThisFATEntOffset 4
 
     ; load FAT sectors in pairs, because FAT12 entry may across two FAT sectors
     push word SegmentOfFAT
     push word OffsetOfFAT
-    push byte 2
+    push word 2
     push ax
     call readSector
-    add sp, 7
 
     ; get FAT entry by cluster
     mov ax, SegmentOfFAT
@@ -133,6 +137,7 @@ getFATByCluster:
 .odd_branch:
     ; if cluster is odd
     shr ax, 4                                   ; high 12 bits of the 16 bits is entry
+                                                ; this and below operation for ax may be confusing, it is related to bit-order
     jmp .out_branch
 .even_branch:
     ; if cluster is even
@@ -140,7 +145,7 @@ getFATByCluster:
 .out_branch:
     mov sp, bp
     pop bp
-    ret
+    ret 2
 
 ; ------------------------------------------------
 ; function: void readFile(uint16 firstCluster,  uint32 bufPtr);
@@ -151,7 +156,6 @@ getFATByCluster:
 readFile:
     push bp
     mov bp, sp
-    sub sp, 0xf                                 ; 15 bytes of local stack
 
 .read_next_cluster:
     ; procedure: getSectorByCluster, not abstract as function to save space
@@ -164,16 +168,15 @@ readFile:
 
     push word [bp+8]                            ; get param bufPtr seg, then push it
     push word [bp+6]                            ; get param next offset to write, then push it
-    push byte 1
+    push word 1
     push ax
     call readSector
-    add sp, 7
 
     ; get next cluster
     push word [bp+4]
     call getFATByCluster
-    add sp, 2
 
+    ; TODO debug up is all right
     mov word [bp+4], ax                         ; update next cluster, directly update param space to save space
     add word [bp+6], BytsPerSec                 ; offset add one sector size
 
@@ -182,7 +185,7 @@ readFile:
 
     mov sp, bp
     pop bp
-    ret
+    ret 6
 
 %endmacro
 

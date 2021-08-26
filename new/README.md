@@ -39,3 +39,18 @@ boot -> loader -> kernel(elf)
 
 - 动态链接器的工作是按程序头表里的信息对文件进行装载，然后将控制转移到ELF的入口地址
     - 动态链接器本身是静态链接的，且不能依赖其他共享对象，即满足自举
+
+# BUG
+- push only accept word, byte is illegal
+- bit-order usually same with byte-order, example for little-endian:
+```
+num:
+0x1234 = 0b0001_0010_0011_0100
+
+in xxd:
+3412 = 0x34 0x12
+
+in mem: low -> high
+0x34 0x12 = 0010_1100_0100_1000
+
+```
