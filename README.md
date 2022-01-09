@@ -1,5 +1,5 @@
 # MYOS
-> A toy OS core
+> A single-core multitasking OS. 
 
 ## Delay
 - 第三章实现了保护模式跳转回实模式的代码 全面学习考虑可以加上 但好像没啥用
