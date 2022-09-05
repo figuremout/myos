@@ -1,11 +1,14 @@
 # MYOS
-> A single-core multitasking OS. 
+> A single-core multitasking OS.
+> Support FAT12 FileSystem
+> Support VHD, floppy image
 
 ## Delay
 - 第三章实现了保护模式跳转回实模式的代码 全面学习考虑可以加上 但好像没啥用
 - int 0x15 检查内存大小 用于确定要初始化多少页表 但是是BIOS中断 必须在实模式下进行 可以在低端1MB留一块内存存储内存大小等BIOS信息 core读取这块内存进行操作
 
 ## 技术选型
+- BIOS/UEFI
 - MBR/GPT
 - FAT32/EXT2
 

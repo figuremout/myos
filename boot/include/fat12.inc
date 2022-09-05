@@ -4,10 +4,10 @@
 ; 2 - Root Directory Region (doesn't exist on FAT32 volumes)
 ; 3 - File and Directory Data Region
 
-; BS values
+; BS(Boot Sector) const values
 DrvNum        equ 0                             ; int 0x13 drive number. 0x00 for floppy disks, 0x80 for hard disks
 
-; BPB values
+; BPB(BIOS Parameter Block) const values
 ; define const, to read fields in other file without load BS_BPB
 BytsPerSec    equ 512                           ; count of bytes per sector
 SecPerClus    equ 1                             ; number of sectors per allocation unit

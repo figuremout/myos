@@ -9,12 +9,14 @@ BS_BPB LABEL_START
 LABEL_START:
     ; --------------------------------------------
     ; BIOS to MBR interface
+    ; https://en.wikipedia.org/wiki/Master_boot_record#BIOS_to_MBR_interface
     ; --------------------------------------------
     ; cs:ip = 0x0000:0x7c00
     ; dl = boot drive unit
     ;  (fixed disks / removable drives: 0x80=first, 0x81=second, ..., 0xfe;
     ;  floppies / superfloppies: 0x00=first, 0x01=second, ..., 0x7e;
-    ;  0xff, 0x7f are reserved for ROM / remote drives and must not be used on disk)
+    ;  0xff, 0x7f are reserved for ROM / remote drives and must not be used on disk.
+    ;  Many MBRs were coded to ignore the DL value and work with a hard-wired value (normally 0x80), anyway.)
     ; dh bit 5 = 0
 
     ; init segment register
@@ -39,7 +41,7 @@ LABEL_START:
     call dispStr
 
     ; reset 1st floppy disk
-    ; TODO why need this
+    ; The read/write arm is moved to cylinder 0 and prepares for the disk I/O
     xor ah, ah
     xor dl, dl
     int 0x13
