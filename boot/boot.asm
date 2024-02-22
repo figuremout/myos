@@ -28,17 +28,67 @@ LABEL_START:
 
     cli                                         ; close response to maskable hardware interrupt
 
+    ; A20 is normally disabled, but QEMU will enable it, disable it
+    ; 1 keyboard controller method
+; unseta20.1:
+;    in al, 0x64
+;    test al, 0x2
+;    jnz unseta20.1
+
+;    mov al, 0xd1
+;    out 0x64, al
+
+; unseta20.2:
+;    in al, 0x64
+;    test al, 0x2
+;    jnz unseta20.2
+
+;    mov al, 0xdd
+;    out 0x60, al
+
+;      2 Fast A20 method
+;    in al, 0x92
+;    and al, 0b1111_1101
+;    out 0x92, al
+
+;      3 access of 0xee
+;    out 0xee,al
+
+;     ; 4 BIOS function method
+;     mov     ax,2400h                ;--- A20-Gate Activate ---
+;     int     15h
+
+;     ; sleep 1 sec
+;     MOV     CX, 0FH
+;     MOV     DX, 4240H
+;     MOV     AH, 86H
+;     INT     15H
     ; clear entire window (not necessary, comment out to save space)
-    mov ax, 0x0600                              ; clear entire window
-    mov bh, 0x07                                ; attr for blank to write
-    mov cx, 0                                   ; windows upper left corner (0,0)
-    mov dx, 0x184f                              ; windows lower right corner (24, 79)
-    int 0x10
+    ; mov ax, 0x0600                              ; clear entire window
+    ; mov bh, 0x07                                ; attr for blank to write
+    ; mov cx, 0                                   ; windows upper left corner (0,0)
+    ; mov dx, 0x184f                              ; windows lower right corner (24, 79)
+    ; int 0x10
 
     ; show booting msg
     mov cx, 12
     mov bp, BootingMsg
     call dispStr
+
+    ; test
+;    mov si, msg             ; SI now points to our message
+;	mov ah, 0x0E            ; Indicate BIOS we're going to print chars
+;.loop	lodsb                   ; Loads SI into AL and increments SI [next char]
+;	or al, al               ; Checks if the end of the string,i.e. '\0'
+;	jz halt                 ; Jump to halt if the end
+;	int 0x10                ; Otherwise, call interrupt for printing the char
+;	jmp .loop               ; Next iteration of the loop
+;
+;halt:	hlt                     ; CPU command to halt the execution
+;        cli
+;        jmp  halt
+;msg:	db "Hello, World!", 0   ; Our actual message to print
+
 
     ; reset 1st floppy disk
     ; The read/write arm is moved to cylinder 0 and prepares for the disk I/O
@@ -167,7 +217,7 @@ dispStr:
 LoaderFileName db 'LOADER  BIN'                 ; FAT short directory entry's DIR_Name field
                                                 ; must be 11 bytes and all in upper case
 CurrentRow:    db 0                             ; row number to display str
-BootingMsg:    db "Booting...",0x0d,0x0a
+BootingMsg:    db "Booting...",0x0d,0x0a        ; 0x0d=CR 0x0a=LF
 BootReadyMsg:  db "Boot Ready",0x0d,0x0a
 NoLoaderMsg:   db "No loader",0x0d,0x0a
 

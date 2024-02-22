@@ -143,7 +143,7 @@ LOADER_START:
     mov eax, [cs:gdt_ptr+2]                     ; get base addr of GDT
     xor edx, edx
     mov ebx, 16
-    div ebx                                     ; eax=segment, edx=0ffset
+    div ebx                                     ; eax=segment, edx=offset
     mov ds, eax
     mov ebx, edx                                ; ds:ebx point to GDT
 
@@ -165,11 +165,13 @@ LOADER_START:
                                                 ; bit 0 is INIT_NOW, set to reset CPU (restart) ;
     out 0x92, al
 
-    cli                                         ; TODO Notice: although never sti before, the instruction cli here still necessary
+    cli                                         ; interrupt system of protected mode is not init, if interrupt comes, CPU will fail to find handler
+                                                ; TODO Notice: although never sti before, the instruction cli here still necessary
                                                 ; otherwise error will occurs in virtualbox, not in bochs
     mov eax, cr0
     or eax, 1                                   ; bit 0 of cr0 is PE
-    mov cr0, eax                                ; set PE, enter protect mode
+    mov cr0, eax                                ; set PE, enter protected mode
+                                                ; now CPU is in 16 bit protected mode
     jmp dword 0x0008:(SegmentOfLoader*16+FLUSH) ; fresh pipeline and serialize CPU
                                                 ; 0x0008 is desc selector: index=0b0000_0000_0000_1 (1# desc, code segment)
                                                 ; TI=0, RPL=00

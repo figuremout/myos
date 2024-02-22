@@ -57,3 +57,13 @@ in mem: low -> high
 0x34 0x12 = 0010_1100_0100_1000
 
 ```
+
+- 支持elf
+- 改用更高级文件系统？
+- 用vhd不用floppy
+- 用qemu
+- 用分页内存管理机制
+
+# 关于用qemu
+搜索关键字：qemu 不需要GUI
+https://blog.csdn.net/adventural/article/details/107805247

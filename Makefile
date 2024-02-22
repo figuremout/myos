@@ -28,7 +28,7 @@ BOOTLOADER		:= $(BOOT) $(LOADER)
 KERNEL			:= $(KERNELDIR)/kernel.bin
 
 ASMOBJS			:= $(KERNELDIR)/kernel.o $(LIBDIR)/klib.o
-COBJS			:= $(KERNELDIR)/start.o 
+COBJS			:= $(KERNELDIR)/start.o
 OBJS			:= $(ASMOBJS) $(COBJS)
 
 IMAGE			:= floppy.img
@@ -53,7 +53,7 @@ $(KERNEL): $(OBJS)
 
 $(IMAGE): $(BOOTLOADER) $(KERNEL)
 	# create raw img
-	dd if=/dev/zero of=$(IMAGE) bs=512 count=2880 # 1440 KB
+	dd if=/dev/zero of=$(IMAGE) bs=512 count=2880 > /dev/null # 1440 KB
 	# make fs
 	mkfs -t vfat -F 12 $(IMAGE)
 	# overwrite boot sector. Notice: Don't do this when mounted
@@ -75,6 +75,10 @@ clean:
 	-rm -rf $(BOOTLOADER)
 	-rm -rf $(KERNEL)
 	-rm -rf $(OBJS)
+	-rm -rf $(IMAGE)
+
+qemu-nox: all
+	qemu-system-i386 -nographic -boot order=a -fda $(IMAGE)
 
 disasm:
 
